@@ -87,9 +87,9 @@ def signal_handler(sig, frame):
         syslog.syslog(syslog.LOG_INFO, "HostCfgd: invalid signal - ignoring..")
 
 
-def run_cmd(cmd, log_err=True, raise_exception=False):
+def run_cmd(cmd, log_err=True, raise_exception=False, use_shell=False):
     try:
-        subprocess.check_call(cmd)
+        subprocess.check_call(cmd, shell=use_shell)
     except Exception as err:
         if log_err:
             syslog.syslog(syslog.LOG_ERR, "{} - failed: return code - {}, output:\n{}"
@@ -1484,6 +1484,10 @@ class DeviceMetaCfg(object):
                                               ' hostname: {}'.format(e))
                 return
             run_cmd(['sudo', 'monit', 'reload'])
+
+            syslog.syslog(syslog.LOG_INFO, 'Restarting rsyslog services to apply new hostname...')
+            run_cmd("sudo systemctl restart rsyslog.service", use_shell=True)
+            run_cmd("for i in `docker ps -q`; do docker exec -it $i supervisorctl restart rsyslogd; done", use_shell=True)
 
 class MgmtIfaceCfg(object):
     """
